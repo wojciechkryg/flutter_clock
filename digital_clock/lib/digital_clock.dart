@@ -209,7 +209,7 @@ class DigitPainter extends CustomPainter {
     if (oldDelegate is DigitPainter) {
       return oldDelegate.digit != digit;
     } else {
-      return false;
+      return true;
     }
   }
 }
