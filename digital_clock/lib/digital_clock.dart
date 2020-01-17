@@ -1,34 +1,25 @@
-// Copyright 2019 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 import 'dart:async';
+import 'dart:math';
 
-import 'package:flutter_clock_helper/model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_clock_helper/model.dart';
 import 'package:intl/intl.dart';
 
 enum _Element {
   background,
-  text,
-  shadow,
+  digit,
 }
 
 final _lightTheme = {
-  _Element.background: Color(0xFF81B3FE),
-  _Element.text: Colors.white,
-  _Element.shadow: Colors.black,
+  _Element.background: Colors.grey.shade300,
+  _Element.digit: Colors.grey.shade800,
 };
 
 final _darkTheme = {
-  _Element.background: Colors.black,
-  _Element.text: Colors.white,
-  _Element.shadow: Color(0xFF174EA6),
+  _Element.background: Colors.grey.shade900,
+  _Element.digit: Colors.red.shade400,
 };
 
-/// A basic digital clock.
-///
-/// You can do better than this!
 class DigitalClock extends StatefulWidget {
   const DigitalClock(this.model);
 
@@ -76,20 +67,12 @@ class _DigitalClockState extends State<DigitalClock> {
   void _updateTime() {
     setState(() {
       _dateTime = DateTime.now();
-      // Update once per minute. If you want to update every second, use the
-      // following code.
       _timer = Timer(
         Duration(minutes: 1) -
             Duration(seconds: _dateTime.second) -
             Duration(milliseconds: _dateTime.millisecond),
         _updateTime,
       );
-      // Update once per second, but make sure to do it at the beginning of each
-      // new second, so that the clock is accurate.
-      // _timer = Timer(
-      //   Duration(seconds: 1) - Duration(milliseconds: _dateTime.millisecond),
-      //   _updateTime,
-      // );
     });
   }
 
@@ -101,34 +84,132 @@ class _DigitalClockState extends State<DigitalClock> {
     final hour =
         DateFormat(widget.model.is24HourFormat ? 'HH' : 'hh').format(_dateTime);
     final minute = DateFormat('mm').format(_dateTime);
-    final fontSize = MediaQuery.of(context).size.width / 3.5;
-    final offset = -fontSize / 7;
-    final defaultStyle = TextStyle(
-      color: colors[_Element.text],
-      fontFamily: 'PressStart2P',
-      fontSize: fontSize,
-      shadows: [
-        Shadow(
-          blurRadius: 0,
-          color: colors[_Element.shadow],
-          offset: Offset(10, 0),
-        ),
-      ],
-    );
+    final firstHourDigit = int.parse(hour) ~/ 10;
+    final secondHourDigit = int.parse(hour) % 10;
+    final firstMinuteDigit = int.parse(minute) ~/ 10;
+    final secondMinuteDigit = int.parse(minute) % 10;
+    final deviceWidth = MediaQuery.of(context).size.width;
+    final radius = deviceWidth / 12;
+    final paintSize = deviceWidth / 60;
+    final digitColor = colors[_Element.digit];
+    final animationDuration = const Duration(milliseconds: 500);
 
     return Container(
       color: colors[_Element.background],
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0),
       child: Center(
-        child: DefaultTextStyle(
-          style: defaultStyle,
-          child: Stack(
-            children: <Widget>[
-              Positioned(left: offset, top: 0, child: Text(hour)),
-              Positioned(right: offset, bottom: offset, child: Text(minute)),
-            ],
-          ),
+        child: Row(
+          children: <Widget>[
+            createDigitWidget(firstHourDigit, digitColor, radius, paintSize,
+                animationDuration),
+            createDigitWidget(secondHourDigit, digitColor, radius, paintSize,
+                animationDuration),
+            createDigitWidget(firstMinuteDigit, digitColor, radius, paintSize,
+                animationDuration),
+            createDigitWidget(secondMinuteDigit, digitColor, radius, paintSize,
+                animationDuration),
+          ],
         ),
       ),
     );
+  }
+
+  Expanded createDigitWidget(int digit, Color color, double radius,
+          double paintSize, Duration animationDuration) =>
+      Expanded(
+        child: AnimatedSwitcher(
+          child: CustomPaint(
+            key: ValueKey(digit),
+            painter: DigitPainter(
+              digit,
+              color: color,
+              radius: radius,
+              paintSize: paintSize,
+            ),
+          ),
+          duration: animationDuration,
+          transitionBuilder: (Widget child, Animation<double> animation) =>
+              ScaleTransition(child: child, scale: animation),
+        ),
+      );
+}
+
+class DigitPainter extends CustomPainter {
+  DigitPainter(this.digit, {this.color, this.radius, this.paintSize});
+
+  final int digit;
+  final Color color;
+  final double radius;
+  final double paintSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = paintSize
+      ..style = PaintingStyle.fill;
+    var center = Offset(size.width / 2, size.height / 2);
+    drawDigit(canvas, center, paint);
+  }
+
+  void drawDigit(Canvas canvas, Offset center, Paint paint) {
+    switch (digit) {
+      case 1:
+        drawDot(canvas, center, paint);
+        break;
+      case 2:
+        drawVerticalRoundedLine(center, canvas, paint);
+        break;
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+        drawRegularPolygon(canvas, center, paint);
+        break;
+    }
+  }
+
+  void drawRegularPolygon(Canvas canvas, Offset center, Paint paint) {
+    canvas.drawPath(regularPolygonPath(center), paint);
+  }
+
+  void drawDot(Canvas canvas, Offset center, Paint paint) {
+    canvas.drawCircle(center, paintSize, paint);
+  }
+
+  void drawVerticalRoundedLine(Offset center, Canvas canvas, Paint paint) {
+    var up = Offset(center.dx, center.dy + radius - paintSize / 2);
+    var down = Offset(center.dx, center.dy - radius + paintSize / 2);
+    canvas.drawLine(up, down, paint);
+    canvas.drawCircle(up, paintSize / 2, paint);
+    canvas.drawCircle(down, paintSize / 2, paint);
+  }
+
+  Path regularPolygonPath(Offset center) {
+    final path = Path()..moveTo(center.dx, center.dy);
+    final startAngle = 1.5;
+    var angle = startAngle * pi;
+    var angleIncrement = 2 * pi / digit;
+    var x, y;
+    var drawCount = digit + 1;
+    for (var i = 0; i < drawCount; i++) {
+      x = center.dx + radius * cos(angle);
+      y = center.dy + radius * sin(angle);
+      path.lineTo(x, y);
+      angle += angleIncrement;
+    }
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    if (oldDelegate is DigitPainter) {
+      return oldDelegate.digit != digit;
+    } else {
+      return false;
+    }
   }
 }
