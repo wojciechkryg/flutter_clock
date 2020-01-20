@@ -2,6 +2,21 @@
 
 Clock made for Flutter Clock challenge.
 
+Every digit on the clock is represented by a regular polygon. Number of apices corresponds with each number from time with some exceptions.
+
+| Digit | Object        |
+|:-----:|---------------|
+| **0** | empty         |
+| **1** | point         |
+| **2** | line segment  |
+| **3** | triangle      |
+| **4** | square        |
+| **5** | pentagon      |
+| **6** | hexagon       |
+| **7** | heptagon      |
+| **8** | octagon       |
+| **9** | nonagon       |
+
 ## Screenshots
 
 ### Light
