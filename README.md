@@ -2,6 +2,12 @@
 
 Clock made for Flutter Clock challenge.
 
+## Web version
+
+**Check the web version [here](https://wojciechkryg.github.io/flutter_polygon_clock/).**
+
+## Details
+
 Every digit on the clock is represented by a regular polygon. Number of apices corresponds with each number from time with some exceptions.
 
 | Digit | Object        |
